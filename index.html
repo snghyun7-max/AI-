@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교실 출석체크</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;min-height:100vh;padding:1rem}
+.app{max-width:860px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e0e0d8;padding:1.25rem}
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap}
+.topbar h2{font-size:17px;font-weight:500;flex:1;min-width:120px;color:#1a1a1a}
+.mode-badge{font-size:11px;padding:3px 10px;border-radius:99px;font-weight:500}
+.mode-admin{background:#EAF3DE;color:#27500A}
+.mode-student{background:#E6F1FB;color:#0C447C}
+.btn{font-size:12px;padding:6px 12px;border-radius:8px;border:1px solid #d0d0c8;background:#fff;color:#1a1a1a;cursor:pointer}
+.btn:hover{background:#f5f5f0}
+.btn-green{background:#1D9E75;color:#fff;border-color:#0F6E56}
+.btn-green:hover{background:#0F6E56}
+.btn-red{background:#FAECE7;color:#4A1B0C;border-color:#D85A30}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+.stat{background:#f5f5f0;border-radius:8px;padding:8px 10px}
+.stat-lbl{font-size:11px;color:#666;margin-bottom:2px}
+.stat-val{font-size:18px;font-weight:500;color:#1a1a1a}
+.stat-val.p{color:#085041}.stat-val.a{color:#993C1D}
+.board-area{background:#EAF3DE;border:1px solid #3B6D11;border-radius:8px;text-align:center;padding:8px;font-size:12px;font-weight:500;color:#27500A;margin-bottom:10px}
+.classroom{display:flex;flex-direction:column;gap:10px;margin-bottom:1rem}
+.desk-row{display:flex;gap:8px;align-items:stretch}
+.row-lbl{font-size:11px;color:#888;width:28px;text-align:right;padding-top:10px;flex-shrink:0}
+.desk{background:#fff;border:1px solid #d0d0c8;border-radius:8px;display:flex;gap:0;overflow:hidden;flex:1}
+.seat{flex:1;padding:5px 3px;text-align:center;cursor:pointer;border-right:1px solid #e8e8e0;transition:background 0.1s}
+.seat:last-child{border-right:none}
+.seat:hover{background:#f5f5f0}
+.seat.present{background:#E1F5EE}
+.seat.present:hover{background:#9FE1CB}
+.seat.absent{background:#FAECE7}
+.seat.absent:hover{background:#F5C4B3}
+.seat.empty{opacity:.35;cursor:default;pointer-events:none}
+.seat-pos{font-size:9px;color:#aaa;margin-bottom:1px}
+.seat-name{font-size:10px;font-weight:500;color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52px;margin:0 auto}
+.seat.present .seat-name{color:#085041}
+.seat.absent .seat-name{color:#4A1B0C}
+.seat-ico{font-size:11px;margin-top:1px}
+.legend{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#666}
+.leg-dot{width:10px;height:10px;border-radius:2px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem}
+.upload-area{border:2px dashed #d0d0c8;border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-bottom:1rem;color:#666;font-size:13px;transition:background 0.1s}
+.upload-area:hover{background:#f5f5f0}
+.section-title{font-size:13px;font-weight:500;color:#1a1a1a;margin-bottom:6px}
+.list-wrap{overflow-x:auto;margin-bottom:1rem}
+.list-tbl{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.list-tbl th{text-align:left;padding:6px 8px;border-bottom:1px solid #e8e8e0;color:#666;font-weight:500;font-size:11px}
+.list-tbl td{padding:6px 8px;border-bottom:1px solid #e8e8e0;color:#1a1a1a}
+.badge{font-size:10px;padding:2px 7px;border-radius:99px;font-weight:500;white-space:nowrap}
+.badge.present{background:#E1F5EE;color:#085041}
+.badge.absent{background:#FAECE7;color:#4A1B0C}
+.badge.none{background:#f5f5f0;color:#666}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;border:1px solid #e0e0d8;padding:1.25rem;width:280px}
+.modal h3{font-size:15px;font-weight:500;color:#1a1a1a;margin-bottom:12px}
+.modal label{font-size:11px;color:#666;display:block;margin-bottom:3px}
+.modal input{width:100%;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid #d0d0c8;background:#fff;color:#1a1a1a;margin-bottom:10px;outline:none}
+.modal input:focus{border-color:#1D9E75;box-shadow:0 0 0 2px #E1F5EE}
+.modal-actions{display:flex;gap:6px;margin-top:4px}
+.modal-actions button{flex:1;font-size:12px;padding:7px}
+.stu-btns{display:flex;gap:10px;margin-top:8px}
+.stu-btns button{flex:1;font-size:14px;padding:12px;border-radius:8px;border:1px solid #d0d0c8;cursor:pointer;font-weight:500}
+.stu-present{background:#E1F5EE;color:#085041;border-color:#1D9E75 !important}
+.stu-absent{background:#FAECE7;color:#4A1B0C;border-color:#D85A30 !important}
+.tab-bar{display:flex;gap:6px;margin-bottom:1rem}
+.tab{font-size:12px;padding:5px 14px;border-radius:8px;border:1px solid #d0d0c8;background:#fff;color:#666;cursor:pointer}
+.tab.active{background:#f5f5f0;color:#1a1a1a;font-weight:500}
+.hidden{display:none}
+input[type=file]{display:none}
+.tip{font-size:11px;color:#aaa;margin-bottom:8px}
+.mode-switch-bar{background:#f0f8ff;border:1px solid #B5D4F4;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:1rem;font-size:12px;color:#0C447C}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="topbar">
+  <h2 id="app-title">교실 출석체크</h2>
+  <span class="mode-badge mode-admin" id="mode-label"><i class="ti ti-shield-check"></i> 관리자</span>
+  <input id="course-input" type="text" placeholder="강의명" style="font-size:12px;padding:5px 8px;border-radius:8px;border:1px solid #d0d0c8;width:110px;outline:none">
+  <button class="btn" onclick="toggleMode()" id="mode-btn"><i class="ti ti-switch-horizontal"></i> 학생 모드</button>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-lbl">전체</div><div class="stat-val" id="s-total">0</div></div>
+  <div class="stat"><div class="stat-lbl">출석</div><div class="stat-val p" id="s-present">0</div></div>
+  <div class="stat"><div class="stat-lbl">결석</div><div class="stat-val a" id="s-absent">0</div></div>
+  <div class="stat"><div class="stat-lbl">미확인</div><div class="stat-val" id="s-none">0</div></div>
+</div>
+
+<div id="admin-view">
+  <div class="tab-bar">
+    <button class="tab active" id="tab-seat" onclick="setTab('seat')"><i class="ti ti-layout-grid"></i> 자리배치</button>
+    <button class="tab" id="tab-list" onclick="setTab('list')"><i class="ti ti-list"></i> 명렬표</button>
+    <button class="tab" id="tab-upload" onclick="setTab('upload')"><i class="ti ti-upload"></i> 엑셀 업로드</button>
+  </div>
+
+  <div id="pane-seat">
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#EAF3DE;border:1px solid #3B6D11"></div>칠판</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#E1F5EE;border:1px solid #1D9E75"></div>출석</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#FAECE7;border:1px solid #D85A30"></div>결석</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#fff;border:1px solid #d0d0c8"></div>미확인</div>
+    </div>
+    <div class="board-area"><i class="ti ti-chalkboard"></i> 칠판 / 교탁</div>
+    <div class="classroom" id="classroom"></div>
+    <div class="controls">
+      <button class="btn btn-green" onclick="markAll('present')"><i class="ti ti-check"></i> 전원 출석</button>
+      <button class="btn" onclick="markAll('none')"><i class="ti ti-refresh"></i> 초기화</button>
+      <button class="btn" onclick="exportCSV()"><i class="ti ti-download"></i> CSV 내보내기</button>
+    </div>
+  </div>
+
+  <div id="pane-list" class="hidden">
+    <div class="list-wrap">
+      <table class="list-tbl">
+        <thead><tr><th style="width:36px">번호</th><th style="width:80px">자리</th><th>이름</th><th style="width:56px">상태</th><th style="width:60px">수정</th></tr></thead>
+        <tbody id="list-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="pane-upload" class="hidden">
+    <p class="section-title">엑셀/CSV 출석부 업로드</p>
+    <p class="tip">열 형식: 번호, 이름 (첫 행 헤더 자동 인식) — .xlsx, .csv 지원</p>
+    <div class="upload-area" onclick="document.getElementById('file-input').click()" id="drop-area">
+      <i class="ti ti-file-spreadsheet" style="font-size:28px;margin-bottom:8px;display:block;color:#3B6D11"></i>
+      클릭하거나 파일을 여기에 드래그하세요<br>
+      <span style="font-size:11px;color:#aaa">.xlsx / .csv 파일</span>
+    </div>
+    <input type="file" id="file-input" accept=".csv,.xlsx" onchange="handleFile(this)">
+    <div id="upload-preview" class="hidden">
+      <p class="section-title" style="margin-bottom:6px">미리보기</p>
+      <div class="list-wrap"><table class="list-tbl" id="preview-tbl"></table></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green" onclick="applyUpload()"><i class="ti ti-check"></i> 적용하기</button>
+        <button class="btn" onclick="cancelUpload()">취소</button>
+      </div>
+    </div>
+    <div style="margin-top:1.5rem">
+      <p class="section-title" style="margin-bottom:4px">엑셀 양식 다운로드</p>
+      <p class="tip">이 양식에 이름을 채워서 다시 업로드하세요</p>
+      <button class="btn" onclick="downloadTemplate()"><i class="ti ti-download"></i> 양식 다운로드 (.csv)</button>
+    </div>
+  </div>
+</div>
+
+<div id="student-view" class="hidden">
+  <div class="mode-switch-bar"><i class="ti ti-info-circle"></i> 학생 모드 — 내 자리를 클릭해 출석 체크하세요</div>
+  <div class="board-area"><i class="ti ti-chalkboard"></i> 칠판 / 교탁</div>
+  <div class="classroom" id="classroom-stu"></div>
+</div>
+
+<!-- Admin Modal -->
+<div class="modal-overlay" id="modal-wrap">
+  <div class="modal">
+    <h3 id="modal-title">자리 정보</h3>
+    <label>이름</label>
+    <input id="modal-name" type="text" placeholder="이름 입력">
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button class="btn btn-green" style="flex:1" onclick="setPending('present')"><i class="ti ti-user-check"></i> 출석</button>
+      <button class="btn btn-red" style="flex:1" onclick="setPending('absent')"><i class="ti ti-user-x"></i> 결석</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-green" onclick="saveModal()">저장</button>
+      <button class="btn" onclick="closeModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- Student Modal -->
+<div class="modal-overlay" id="stu-modal-wrap">
+  <div class="modal">
+    <h3 id="stu-modal-title">출석체크</h3>
+    <p id="stu-seat-info" style="font-size:12px;color:#666;margin-bottom:4px"></p>
+    <p id="stu-name-big" style="font-size:22px;font-weight:500;color:#1a1a1a;margin-bottom:12px"></p>
+    <div id="stu-action"></div>
+    <button class="btn" onclick="closeStuModal()" style="width:100%;margin-top:10px">닫기</button>
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const ROWS=10,DESKS_PER_ROW=5,SEATS_PER_DESK=3;
+let seats=[],isAdmin=true,currentModal=-1,pendingStatus=null,previewData=null,currentStuSeat=null;
+
+function initSeats(){
+  seats=[];
+  for(let r=0;r<ROWS;r++)
+    for(let d=0;d<DESKS_PER_ROW;d++)
+      for(let s=0;s<SEATS_PER_DESK;s++)
+        seats.push({row:r,desk:d,seatInDesk:s,name:'',status:'none'});
+}
+
+function getSeat(r,d,s){return seats.find(x=>x.row===r&&x.desk===d&&x.seatInDesk===s)}
+function getSeatIdx(r,d,s){return seats.findIndex(x=>x.row===r&&x.desk===d&&x.seatInDesk===s)}
+
+function renderClassroom(elId,studentMode){
+  const el=document.getElementById(elId);
+  el.innerHTML='';
+  for(let r=0;r<ROWS;r++){
+    const rowDiv=document.createElement('div');
+    rowDiv.className='desk-row';
+    const lbl=document.createElement('div');
+    lbl.className='row-lbl';
+    lbl.textContent=(r+1)+'줄';
+    rowDiv.appendChild(lbl);
+    for(let d=0;d<DESKS_PER_ROW;d++){
+      const desk=document.createElement('div');
+      desk.className='desk';
+      for(let s=0;s<SEATS_PER_DESK;s++){
+        const seat=getSeat(r,d,s);
+        const sDiv=document.createElement('div');
+        sDiv.className='seat '+(seat.status)+(!seat.name?' empty':'');
+        const ico=seat.status==='present'?'✓':seat.status==='absent'?'✗':'·';
+        sDiv.innerHTML=`<div class="seat-pos">${d+1}-${s+1}</div><div class="seat-name">${seat.name||'—'}</div><div class="seat-ico">${ico}</div>`;
+        if(seat.name){
+          if(studentMode) sDiv.onclick=()=>openStuModal(r,d,s);
+          else sDiv.onclick=()=>openModal(getSeatIdx(r,d,s));
+        }
+        desk.appendChild(sDiv);
+      }
+      rowDiv.appendChild(desk);
+    }
+    el.appendChild(rowDiv);
+  }
+}
+
+function render(){
+  renderClassroom('classroom',false);
+  if(!isAdmin) renderClassroom('classroom-stu',true);
+  renderList();updateStats();
+}
+
+function updateStats(){
+  const named=seats.filter(s=>s.name);
+  document.getElementById('s-total').textContent=named.length;
+  document.getElementById('s-present').textContent=seats.filter(s=>s.status==='present').length;
+  document.getElementById('s-absent').textContent=seats.filter(s=>s.status==='absent').length;
+  document.getElementById('s-none').textContent=named.filter(s=>s.status==='none').length;
+}
+
+function renderList(){
+  const tb=document.getElementById('list-body');
+  tb.innerHTML='';
+  let num=1;
+  seats.forEach((s,i)=>{
+    if(!s.name)return;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${num++}</td><td style="color:#666">${s.row+1}줄 ${s.desk+1}번책상 ${s.seatInDesk+1}번</td><td>${s.name}</td><td><span class="badge ${s.status}">${s.status==='present'?'출석':s.status==='absent'?'결석':'미확인'}</span></td><td><button class="btn" style="font-size:10px;padding:3px 8px" onclick="openModal(${i})">수정</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function openModal(idx){
+  currentModal=idx;pendingStatus=seats[idx].status;
+  document.getElementById('modal-title').textContent=`${seats[idx].row+1}줄 ${seats[idx].desk+1}번 책상 ${seats[idx].seatInDesk+1}번 자리`;
+  document.getElementById('modal-name').value=seats[idx].name;
+  document.getElementById('modal-wrap').classList.add('open');
+  setTimeout(()=>document.getElementById('modal-name').focus(),50);
+}
+function setPending(s){pendingStatus=s}
+function saveModal(){
+  if(currentModal<0)return;
+  seats[currentModal].name=document.getElementById('modal-name').value.trim();
+  seats[currentModal].status=pendingStatus||seats[currentModal].status;
+  closeModal();render();
+}
+function closeModal(){document.getElementById('modal-wrap').classList.remove('open');currentModal=-1;pendingStatus=null}
+
+function openStuModal(r,d,s){
+  currentStuSeat={r,d,s};
+  const seat=getSeat(r,d,s);
+  document.getElementById('stu-modal-title').textContent='출석체크';
+  document.getElementById('stu-seat-info').textContent=`${r+1}줄 ${d+1}번 책상 ${s+1}번 자리`;
+  document.getElementById('stu-name-big').textContent=seat.name;
+  const action=document.getElementById('stu-action');
+  if(seat.status==='none'){
+    action.innerHTML=`<div class="stu-btns"><button class="stu-present" onclick="stuMark('present')"><i class="ti ti-user-check"></i> 출석</button><button class="stu-absent" onclick="stuMark('absent')"><i class="ti ti-user-x"></i> 결석</button></div>`;
+  } else {
+    action.innerHTML=`<div style="font-size:18px;font-weight:500;color:${seat.status==='present'?'#085041':'#993C1D'};text-align:center;padding:12px 0">${seat.status==='present'?'✓ 출석 완료':'✗ 결석 처리됨'}</div>`;
+  }
+  document.getElementById('stu-modal-wrap').classList.add('open');
+}
+function stuMark(st){
+  if(!currentStuSeat)return;
+  const idx=getSeatIdx(currentStuSeat.r,currentStuSeat.d,currentStuSeat.s);
+  if(idx<0)return;
+  seats[idx].status=st;
+  const action=document.getElementById('stu-action');
+  action.innerHTML=`<div style="font-size:18px;font-weight:500;color:${st==='present'?'#085041':'#993C1D'};text-align:center;padding:12px 0">${st==='present'?'✓ 출석 완료':'✗ 결석 처리됨'}</div>`;
+  render();
+}
+function closeStuModal(){document.getElementById('stu-modal-wrap').classList.remove('open');currentStuSeat=null}
+
+function markAll(st){seats.forEach(s=>{if(s.name)s.status=st});render()}
+
+function setTab(t){
+  ['seat','list','upload'].forEach(x=>{
+    document.getElementById('tab-'+x).className='tab'+(x===t?' active':'');
+    document.getElementById('pane-'+x).className=(x===t?'':'hidden');
+  });
+}
+
+function toggleMode(){
+  isAdmin=!isAdmin;
+  document.getElementById('admin-view').className=isAdmin?'':'hidden';
+  document.getElementById('student-view').className=isAdmin?'hidden':'';
+  document.getElementById('mode-label').className='mode-badge '+(isAdmin?'mode-admin':'mode-student');
+  document.getElementById('mode-label').innerHTML=isAdmin?'<i class="ti ti-shield-check"></i> 관리자':'<i class="ti ti-user"></i> 학생';
+  document.getElementById('mode-btn').innerHTML=isAdmin?'<i class="ti ti-switch-horizontal"></i> 학생 모드':'<i class="ti ti-switch-horizontal"></i> 관리자 모드';
+  if(!isAdmin)renderClassroom('classroom-stu',true);
+  updateStats();
+}
+
+function handleFile(input){
+  const file=input.files[0];if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){
+    const reader=new FileReader();
+    reader.onload=e=>parseCSV(e.target.result);
+    reader.readAsText(file,'UTF-8');
+  } else if(ext==='xlsx'){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      parseRows(XLSX.utils.sheet_to_json(ws,{header:1}));
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+function parseCSV(text){
+  parseRows(text.split('\n').map(l=>l.split(',').map(c=>c.trim().replace(/^"|"$/g,''))));
+}
+
+function parseRows(rows){
+  if(!rows||rows.length<2){alert('데이터가 없습니다');return}
+  const h=rows[0].map(x=>String(x).toLowerCase());
+  const start=h.some(x=>x.includes('이름')||x.includes('name')||x.includes('번호'))?1:0;
+  const ni=Math.max(0,h.findIndex(x=>x.includes('이름')||x.includes('name')||x==='학생'));
+  const realNi=start===0?1:ni;
+  previewData=rows.slice(start).filter(r=>r[realNi]&&String(r[realNi]).trim()).map(r=>String(r[realNi]).trim());
+  if(!previewData.length){alert('이름 열을 찾을 수 없습니다');return}
+  const prev=document.getElementById('upload-preview');
+  const tbl=document.getElementById('preview-tbl');
+  tbl.innerHTML=`<thead><tr><th>번호</th><th>이름</th></tr></thead>`;
+  const tb=document.createElement('tbody');
+  previewData.slice(0,8).forEach((n,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${i+1}</td><td>${n}</td>`;tb.appendChild(tr)});
+  if(previewData.length>8){const tr=document.createElement('tr');tr.innerHTML=`<td colspan="2" style="color:#aaa;font-size:11px">... 외 ${previewData.length-8}명</td>`;tb.appendChild(tr)}
+  tbl.appendChild(tb);
+  prev.className='';
+}
+
+function applyUpload(){
+  if(!previewData)return;
+  seats.forEach(s=>{s.name='';s.status='none'});
+  let pi=0;
+  for(let i=0;i<seats.length&&pi<previewData.length;i++) seats[i].name=previewData[pi++];
+  previewData=null;
+  document.getElementById('upload-preview').className='hidden';
+  document.getElementById('file-input').value='';
+  setTab('seat');render();
+}
+function cancelUpload(){previewData=null;document.getElementById('upload-preview').className='hidden';document.getElementById('file-input').value=''}
+
+function downloadTemplate(){
+  const rows=[['번호','이름']];
+  for(let i=1;i<=50;i++)rows.push([i,'']);
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='출석부_양식.csv';a.click();
+}
+
+function exportCSV(){
+  const rows=[['번호','줄','책상','자리','이름','상태']];
+  let num=1;
+  seats.forEach(s=>{if(s.name)rows.push([num++,s.row+1,s.desk+1,s.seatInDesk+1,s.name,s.status==='present'?'출석':s.status==='absent'?'결석':'미확인'])});
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='출석결과.csv';a.click();
+}
+
+const dropArea=document.getElementById('drop-area');
+dropArea.addEventListener('dragover',e=>{e.preventDefault();dropArea.style.background='#f5f5f0'});
+dropArea.addEventListener('dragleave',()=>{dropArea.style.background=''});
+dropArea.addEventListener('drop',e=>{
+  e.preventDefault();dropArea.style.background='';
+  const f=e.dataTransfer.files[0];
+  if(f){const inp=document.getElementById('file-input');const dt=new DataTransfer();dt.items.add(f);inp.files=dt.files;handleFile(inp)}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeStuModal()}});
+
+initSeats();render();
+</script>
+</body>
+</html>
